@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<album artist="Metallica" title="Metallica">
+  <reach>195627</reach>
+  <url>http://www.last.fm/music/Metallica/Metallica</url>
+  <releasedate>29 Aug 1991, 00:00</releasedate>
+  <coverart>
+    <small>http://cdn.last.fm/coverart/130x130/1411800.jpg</small>
+    <medium>http://cdn.last.fm/coverart/130x130/1411800.jpg</medium>
+    <large>http://cdn.last.fm/coverart/130x130/1411800.jpg</large>
+  </coverart>
+  <mbid>3750d9e2-59f5-471d-8916-463433069bd1</mbid>
+  <tracks>
+    <track title="Enter Sandman">
+      <reach>217037</reach>
+      <url>http://www.last.fm/music/Metallica/_/Enter+Sandman</url>
+    </track>
+    <track title="Sad but True">
+      <reach>141654</reach>
+      <url>http://www.last.fm/music/Metallica/_/Sad+but+True</url>
+    </track>
+    <track title="Holier Than Thou">
+      <reach>84221</reach>
+      <url>http://www.last.fm/music/Metallica/_/Holier+Than+Thou</url>
+    </track>
+    <track title="The Unforgiven">
+      <reach>148058</reach>
+      <url>http://www.last.fm/music/Metallica/_/The+Unforgiven</url>
+    </track>
+    <track title="Wherever I May Roam">
+      <reach>122085</reach>
+      <url>http://www.last.fm/music/Metallica/_/Wherever+I+May+Roam</url>
+    </track>
+    <track title="Don't Tread on Me">
+      <reach>78221</reach>
+      <url>http://www.last.fm/music/Metallica/_/Don%27t+Tread+on+Me</url>
+    </track>
+    <track title="Through the Never">
+      <reach>80597</reach>
+      <url>http://www.last.fm/music/Metallica/_/Through+the+Never</url>
+    </track>
+    <track title="Nothing Else Matters">
+      <reach>217659</reach>
+      <url>http://www.last.fm/music/Metallica/_/Nothing+Else+Matters</url>
+    </track>
+    <track title="Of Wolf and Man">
+      <reach>104896</reach>
+      <url>http://www.last.fm/music/Metallica/_/Of+Wolf+and+Man</url>
+    </track>
+    <track title="The God That Failed">
+      <reach>78475</reach>
+      <url>http://www.last.fm/music/Metallica/_/The+God+That+Failed</url>
+    </track>
+    <track title="My Friend of Misery">
+      <reach>77743</reach>
+      <url>http://www.last.fm/music/Metallica/_/My+Friend+of+Misery</url>
+    </track>
+    <track title="The Struggle Within">
+      <reach>70781</reach>
+      <url>http://www.last.fm/music/Metallica/_/The+Struggle+Within</url>
+    </track>
+  </tracks>
+</album>

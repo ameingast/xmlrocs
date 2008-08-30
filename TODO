@@ -1,0 +1,15 @@
+= TODO
+
+== Typing
+
+Introduce some kind of typing for text values, so you can say:
+
+  o = XMLROCS::XMLNode.new :text => some_text
+  o.type :child => Integer
+  o.type :child => { :attribute => Integer }
+  o.type :child => { :attribute => Array }
+  
+  
+== Performance
+
+The initialization of a whole XMLNode Tree is bad. Improve it.

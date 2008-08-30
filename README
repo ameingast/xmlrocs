@@ -1,0 +1,207 @@
+= About
+
+XMLROCS is short for XML Ruby ObjeCtS. It is a library that allows to 
+map XML data to Ruby objects.
+
+XMLROCS is kind of a poor man's DOM. It provides basic access to attributes
+and child elements so you can comfortably work with XML data.
+Generally speaking, you can manipulate your XML data in true Ruby OO style.
+
+== Creating an XMLROC
+ 
+The following XML data will be used in the following examples:
+
+  xml = <<-EOS
+  <products name="Computers">
+    This is a mixed content for the following products:
+    <product id="2">Dell</product>
+    <product id="1">Acer</product>
+    <product id="3">Apple</product>
+    Another text.
+    <product id="4">HP</product>
+  </products>
+  EOS
+
+  o = XMLROCS::XMLNode.new :text => xml # => produces an XMLROC
+
+If you already have an REXML::Document flying arround you can do the following:
+
+  rexml_document =  REXML::Document.new(xml)
+  o = XMLROCS::XMLNode.new :root => rexml_document.root
+
+
+== Accessing and Modifiying Attributes
+
+All attributes are available via the []-operator. Attributenames are stored
+as symbols, so the []-operator behaves pretty much like a Hash with symbol-keys.
+Let's have a look at it:
+
+  o[:name] # => Computers
+  o[:i_m_not_there] # => nil
+
+You can also modify attributes:
+
+  o[:name] = o[:name].reverse # => sretupmoC
+
+which is pretty much equivalent to:
+
+  o[:name].reverse! # => sretupmoC
+
+The other way to handle attributes is to access the @attributes accessor, which
+acts as a hash with the following format:
+
+  { :atrribute_name => "attribute_value" }
+
+Just like with the []-operator you can also modify the accessor-variable.
+
+
+== Accessing and Modifiyng Children
+
+Children can be accessed via instance methods or the @children accessor.
+Just like the @attributes accessor, the @children accessor has the following 
+format:
+
+  { :child_name => [ XMLNode, ... ] }
+
+:child_name is the name of the tag of the child, while XMLNode is an array
+containing all children with the name.
+Still, this solution is mainly used for internal representation and it is
+pretty tedious to work with, because you _always_ have to handle the array,
+even when you know that there is only one child (probably garuanteed by some
+DTD or XSD).
+Instance methods solve this problem by ALWAYS returning a direct XMLNode. 
+If there are n > 1 children with the same name, the instance method will
+return the last (wrt to appearance in the XML data) element.
+You can access all children with the same name by appending a '!' 
+to the instance_method just like this:
+
+  o.tag_name! # => [ XMLNode, ... ]
+
+Some other examples:
+
+  # Determine the id of the Apple-product
+  o.product!.select { |x| x == "Apple" }.first[:id] # => "3"
+
+  # Determine the ids of all products whose name is not empty
+  o.product!.select { |x| not x.empty? } # => ["Dell", "Acer", "Apple", "HP"]
+
+  # Determine the name of the product with id == "3"
+  o.product!.select { |x| x[:id] == "3" }.first # => "Apple"
+
+  # produce a hashmap { id => productname }
+  o.product!.inject({}) { |h,x| h.merge({ x[:id] => x }) } # => {"1"=>"Acer", "2"=>"Dell", "3"=>"Apple", "4"=>"HP"}
+  
+  # sort by product id
+  o.product!.sort { |a,b| a[:id] <=> b[:id] } # => ["Acer", "Dell", "Apple", "HP"]
+
+  # get the last product (wrt order of appearance in the xml text)
+  o.product # => HP
+
+  # apply some changes and write back the xml
+  o.product!.each { |x| x[:id] = "#{x[:id].to_i * 10}" }
+  o.to_xml # => 
+  '<products name="Computers">
+     <product id="20">Dell</product>
+     <product id="10">Acer</product>
+     <product id="30" >Apple</product>
+     <product id="40">HP</product>
+  </products>'
+
+  o.product!.each { |x| x.set_text(x.reverse) }
+  o.to_xml # => 
+  '<products name="Computers">
+     <product id="20">lleD</product>
+     <product id="10">recA</product>
+     <product id="30">elppA</product>
+     <product id="40">PH</product>
+  </products>'
+
+== Appending and Removing Children and Attributes
+
+To add attributes, just add a new entry to the attributes accessor:
+
+  o[:short_name] = "comp" 
+  puts o.to_xml # => 
+  <products name="Computers"  short_name="comp">
+    ...
+  </products>
+
+To remove an attribute, you have to call the delete_attribute method
+
+  o.delete_attribute!(:short_name)
+  puts o.to_xml # => 
+  <products name="Computers">
+    ...
+  </products>
+
+
+To add children, call the << operator with an XMLNode as argument.
+
+  # create the child node
+  child = XMLROCS::XMLNode.new(:text => '<product id="5">Fujitsu</product>')
+  # add it to the o-node
+  o << child
+  puts o.product!.select { |x| x[:id] == "5" }.first # => Fujitsu
+
+To remove a child, call the >> operator with the childname as argument.
+You can also provide a block to provide a more fine-grained filter.
+The block will then be called with a child XMLNode as an argument.
+
+  # remove all children with id == "5"
+  o.>> { |child| child[:id] == "5" }
+
+Whenever you provide a block, you have to bind the >> operator to 
+the object, because of the lower precedence of the infix call.
+
+  # remove all product children with id == "5"
+  o.>>(:product) { |child| child[:id] == "5" }
+
+  # remove all children called :product
+  o >> :product
+
+== Walking over the XML-Tree Structure
+
+All iterating is done in Preorder, but you can override the default behaviour
+by setting the traversal accessor.
+
+Currently the library supports the following traversals:
+
+  o.traversal = :preorder # default
+  o.traversal = :inorder 
+  o.traversal = :postorder 
+
+You can inject the XML Tree with a left associative function, and map
+over the tree by calling map or map! which will not produce an Array but
+another XML Tree.
+
+== Aggregating
+
+This library does not provide direct support for XPath, but you can emulate
+it's behaviour with iterators and closures.
+
+Suppose you want to select all products whose id is smaller than 5. In
+XPath you probably would come up with something like this:
+
+  //[@id < 5]
+
+With XMLROCS there is no need for XPaths, because you can do the very same
+thing easily in Ruby:
+
+  o.select { |node| node[:id] && node[:id].to_i < 5 }
+
+Here's another one that builds an Array of all leafs:
+  
+  o.select { |node| node.leaf? }
+
+which is equivalent to:
+
+  o.select { |node| node.children.empty? }
+
+Here's another one. Select all nodes that have no attributes:
+
+  o.select { |node| node.attributes.empty? }
+
+It's actually quite handy, since your closure gets called on all children
+and the object itself and then selects which elements you want to keep.
+The big advandage here is, that you can actually do anything in the closure
+that Ruby can do.
