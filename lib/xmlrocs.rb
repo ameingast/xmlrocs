@@ -29,13 +29,20 @@
 #
 
 require 'rubygems'
-require 'hpricot'
+require 'ruby-debug'
+require 'java'
+
+include_class 'com.ximpleware.VTDGen'
+include_class 'com.ximpleware.VTDNav'
+include_class 'com.ximpleware.BookMark'
 
 #
 # For more information, have a look at the README or the XMLNode class 
 # documentation.
 #
 module XMLROCS
+  
+  include_package 'com.ximpleware'
   
   #
   # Represents an XML Element. You can access and modify it's children
@@ -116,40 +123,58 @@ module XMLROCS
     # be thrown.
     #
     # Supported options:
-    #   :root       # => REXML::Element that will be traversed.
-    #   :text       # => XML plaintext that will be parsed by REXML and then
-    #                    traversed.
-    #   :bin        # => Build an XMLNode from marshalled binary content
-    #   :nil        # => Will create a nil node. Useful if you need a global
-    #                    parent.
     #   :traversal  # => The traversal order. See traversal.
     #
-    def initialize(options = {})      
-      xml = if options[:root]
-        options[:root]
-      elsif options[:text]
-        h = Hpricot.XML(options[:text])
-        h.class == Hpricot::Doc ? 
-          h.children.select { |e| e.class == Hpricot::Elem }.first : h
-      elsif options[:nil]
-        @xmlname = :NIL
-        nil
-      end
-      
-      raise(ArgumentError, "Undefined") if !xml and !options[:nil]
+    def initialize(options = {})
       @children, @attributes = {}, {}
-      @parent ,@traversal = options[:parent], options[:traversal] || :preorder
+      @parent, @traversal = options[:parent], options[:traversal] || :preorder
       
-      if xml
-        @xmlname = xml.name.to_sym
-        xml.attributes.each { |k,v| self[k.to_sym] = v }
-        xml.each_child do |e|
-          e.class == Hpricot::Text ? 
-            set_text(e.to_s) : self << XMLNode.new({ :root => e, :parent => self })
+      vg = VTDGen.new
+      
+      if options[:nil]
+        @xmlname = :NIL
+        return
+      elsif options[:text]
+        vg.set_doc(java.lang.String.new(options[:text]).get_bytes)
+        begin
+          vg.parse(true)
+        rescue NativeException => e
+          raise(ArgumentError, e.to_s)
         end
+        vn = vg.get_nav
+        vn.to_element(VTDNav::R)
+      elsif options[:file]
+        vg.parse_file(options[:file], true)
+        vn = vg.get_nav
+        vn.to_element(VTDNav::R)
+      elsif options[:root]
+        vn = options[:root]
       end
-    end
+      
+      @xmlname = vn.to_string(vn.get_current_index).to_sym
+          
+      t = vn.get_text
+      set_text(vn.to_normalized_string(t)) unless -1 == t
+          
+      i = vn.get_current_index
+      j = 0
+      
+      while j < vn.get_attr_count
+        key = vn.to_string(i + 2*j + 1).to_sym
+        val = vn.to_string(i + 2*j + 2)
+        @attributes.merge!({ key => val })
+        j += 1
+      end
 
+      vn.push
+      self << XMLNode.new({ :root => vn, :parent => self }) if vn.to_element(VTDNav::FC)
+      vn.pop
+      
+      while vn.to_element(VTDNav::NS)
+        @parent << XMLNode.new({ :root => vn, :parent => @parent }) if @parent
+      end  
+    end
+    
     # 
     # Access attributes by name. Attributenames are stored as symbols.
     #
@@ -236,6 +261,18 @@ module XMLROCS
       traverse.each(&block)
     end
     
+    def flatten
+      traverse.flatten
+    end
+    
+    def last
+      traverse.last
+    end
+    
+    def first
+      traverse.first
+    end
+    
     # 
     # Deep-copies the Tree.
     #
@@ -249,7 +286,13 @@ module XMLROCS
     # Otherwise it does the same for the current node.
     #
     def single?(tag = nil)
-      tag ? @children[tag].length == 1 : @parent.children[@xmlname].length == 1
+      if tag && @children[tag]
+        @children[tag].length == 1 
+      elsif @parent.children[@xmlname]
+        @parent.children[@xmlname].length == 1
+      else
+        false
+      end
     end
 
     # 
@@ -286,7 +329,10 @@ module XMLROCS
       return false unless other == self.to_s
       [ [ self, other ], [ other, self ] ].each do |a,b|
         a.children.each do |k,v| 
-          return false if !b.children.has_key?(k) or v != b.children[k]
+          if !b.children.has_key?(k) or v != b.children[k]
+            p "#{v} != #{b.children[k]}, #{k}"
+            return false
+          end
         end
       end
       true
@@ -343,3 +389,4 @@ module XMLROCS
     end
   end
 end
+

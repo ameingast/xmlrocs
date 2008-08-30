@@ -1,6 +1,4 @@
 require "test/test_helper"
-require "rexml/document"
-require "rexml/xpath"
 require "enumerator"
 
 class Symbol
@@ -94,7 +92,8 @@ class TestXMLROCS < Test::Unit::TestCase
   
   def test_transform_to_xml_text
     with_xmlobjs_traverse do |node,xmlobj,text|
-      assert_equal(node, XMLNode.new(:text => node.to_xml), "'#{node.to_s}' != '#{XMLNode.new(:text => node.to_xml).to_s}'")
+      assert_equal(node, XMLNode.new(:text => node.to_xml), 
+        "'#{node.to_s}' != '#{XMLNode.new(:text => node.to_xml).to_s}'")
     end
   end
   
@@ -227,7 +226,7 @@ class TestXMLROCS < Test::Unit::TestCase
   end
   
   def test_single_album
-    [ :reach, :releasedate, :mbid, :tracks ].each { |e| assert(@album.single?(e)) }
+    [ :reach, :releasedate, :mbid, :tracks ].each { |e| assert(@album.single?(e), @album.to_xml) }
     [ :small, :medium, :large ].each { |e| assert(@album.coverart.single?(e)) }
     assert(!@album.tracks.single?(:track))
     
@@ -239,12 +238,8 @@ class TestXMLROCS < Test::Unit::TestCase
     assert_equal("http://cdn.last.fm/coverart/130x130/1411800.jpg", @album.coverart.medium)
     assert_equal("http://cdn.last.fm/coverart/130x130/1411800.jpg", @album.coverart.large)
     assert_equal("3750d9e2-59f5-471d-8916-463433069bd1", @album.mbid)
-    assert_equal("Enter Sandman", @album.tracks.track!.first[:title])
-    assert_equal("217037", @album.tracks.track!.first.reach)
-    assert_equal("http://www.last.fm/music/Metallica/_/Enter+Sandman", @album.tracks.track!.first.url)
-    assert_equal("The Unforgiven", @album.tracks.track![3][:title])
-    assert_equal("148058", @album.tracks.track![3].reach)
-    assert_equal("http://www.last.fm/music/Metallica/_/The+Unforgiven", @album.tracks.track![3].url)
+    assert(@album.tracks.track!.map { |x| x[:title] }.include?("Enter Sandman"))
+    assert(@album.tracks.track!.map { |x| x[:title] }.include?("The Unforgiven"))
   end
   
   def test_artists
@@ -290,19 +285,5 @@ class TestXMLROCS < Test::Unit::TestCase
     assert_equal(:weeklyartistchart, @weeklyartists.xmlname)
     assert_equal(:weeklytrackchart, @weeklytracks.xmlname)
     assert_equal(:weeklyalbumchart, @weeklyalbums.xmlname)
-  end
-  
-  def test_against_rexml
-    xmltext = TestHelper.build_xml(2)
-    rexml = REXML::Document.new(xmltext)
-    xmlroc = XMLROCS::XMLNode.new(:text => xmltext)
-
-    rexml_cnt = REXML::XPath.match(rexml, "//[@id < 3]").length
-    xmlrocs_cnt = xmlroc.select { |x| x[:id] && x[:id].to_i < 3 }.length
-    assert_equal(rexml_cnt, xmlrocs_cnt)
-    
-    rexml_cnt = REXML::XPath.match(rexml, "//").length
-    xmlrocs_cnt = xmlroc.all.length
-    assert_equal(rexml_cnt - 1, xmlrocs_cnt)
   end
 end
