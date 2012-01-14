@@ -129,8 +129,12 @@ module XMLROCS
         options[:root]
       elsif options[:text]
         h = Hpricot.XML(options[:text])
-        h.class == Hpricot::Doc ? 
-          h.children.select { |e| e.class == Hpricot::Elem }.first : h
+        if h.class == Hpricot::Doc
+          raise(ArgumentError, "undefined") if h.children.nil?
+            h.children.select { |e| e.class == Hpricot::Elem }.first
+        else
+          h
+        end
       elsif options[:nil]
         @xmlname = :NIL
         nil
@@ -142,7 +146,7 @@ module XMLROCS
       
       if xml
         @xmlname = xml.name.to_sym
-        xml.attributes.each { |k,v| self[k.to_sym] = v }
+        xml.attributes.to_hash.each { |k,v| self[k.to_sym] = v }
         xml.each_child do |e|
           e.class == Hpricot::Text ? 
             set_text(e.to_s) : self << XMLNode.new({ :root => e, :parent => self })
